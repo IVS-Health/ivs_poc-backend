@@ -1,0 +1,3 @@
+- Hold plain JavaScript/TypeScript helper functions — not tied to NestJS or dependency injection.
+- example formatDate(), formatTime(), etc
+

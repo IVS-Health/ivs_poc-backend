@@ -1,0 +1,1 @@
+- Hold shared logic, providers, decorators, filters, interceptors, and pipes that multiple modules use.
