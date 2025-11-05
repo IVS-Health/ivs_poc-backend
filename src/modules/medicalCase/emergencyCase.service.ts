@@ -1,0 +1,26 @@
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { EmergencyCase } from "./emergencyCase.entity";
+import { EmergencyCaseDto } from "./dto/emergencyCase.dto";
+
+@Injectable()
+export class EmergencyCaseService {
+  constructor(
+    @InjectRepository(EmergencyCase)
+    private readonly emergencyCaseRepo: Repository<EmergencyCase>
+  ) {}
+
+  async registerNewCase(emergencyCaseDto: EmergencyCaseDto) {
+    const { location, callBackNumber, natureOfEmergency, patientCondition } =
+      emergencyCaseDto;
+
+    const emergencyCase = this.emergencyCaseRepo.create({
+      location,
+      callBackNumber,
+      natureOfEmergency,
+      patientCondition,
+    });
+    await this.emergencyCaseRepo.save(emergencyCase);
+  }
+}
