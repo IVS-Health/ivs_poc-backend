@@ -3,6 +3,9 @@ import { ConfigModule } from "@nestjs/config";
 import { UsersModule } from "./modules/users/users.module";
 import { EmergencyCaseModule } from "./modules/medicalCase/emergencyCase.module";
 import { DatabaseModule } from "./database/database.module";
+import { FirebaseModule } from "./firebase/firebase.module";
+import { NotificationsModule } from "./modules/notification/notification.module";
+import { TokenModule } from "./modules/token/token.module";
 
 @Module({
   imports: [
@@ -10,6 +13,9 @@ import { DatabaseModule } from "./database/database.module";
     DatabaseModule,
     UsersModule,
     EmergencyCaseModule,
+    FirebaseModule,
+    NotificationsModule,
+    TokenModule,
   ],
 })
 export class AppModule {}

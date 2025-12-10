@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Post } from "@nestjs/common";
 import { EmergencyCaseService } from "./emergencyCase.service";
 import { EmergencyCaseDto } from "./dto/emergencyCase.dto";
 
@@ -8,6 +8,14 @@ export class EmergencyCaseController {
 
   @Post("newCase")
   async registerNewCase(@Body() emergencyCaseDto: EmergencyCaseDto) {
-    return this.emergencyCaseService.registerNewCase(emergencyCaseDto);
+    const newCase =
+      await this.emergencyCaseService.registerNewCase(emergencyCaseDto);
+    return { message: "Case registered successfully", case: newCase };
+  }
+
+  @Get("allCases")
+  async findAllCases() {
+    const cases = await this.emergencyCaseService.findAllCases();
+    return { cases };
   }
 }
