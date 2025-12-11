@@ -1,4 +1,8 @@
-import { Injectable } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { EmergencyCase } from "./emergencyCase.entity";
@@ -22,5 +26,13 @@ export class EmergencyCaseService {
       patientCondition,
     });
     await this.emergencyCaseRepo.save(emergencyCase);
+  }
+
+  async findAllCases() {
+    const cases = await this.emergencyCaseRepo.find();
+    if (!cases) {
+      throw new NotFoundException(`No casesfound`);
+    }
+    return cases;
   }
 }

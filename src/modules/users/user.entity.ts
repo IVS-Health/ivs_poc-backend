@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne } from "typeorm";
+import { Token } from "../token/token.entity";
 
 @Entity()
 export class User {
@@ -11,9 +12,12 @@ export class User {
   @Column({ nullable: true })
   name: string;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: "int", nullable: true })
   age?: number;
 
   @Column({ nullable: true })
   medicalSpecialty?: string;
+
+  @OneToOne(() => Token, (token) => token.user)
+  token?: Token;
 }

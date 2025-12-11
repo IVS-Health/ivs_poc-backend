@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import databaseConfig from "../config/database.config";
 import { User } from "../modules/users/user.entity";
 import { EmergencyCase } from "../modules/medicalCase/emergencyCase.entity";
+import { Token } from "src/modules/token/token.entity";
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { EmergencyCase } from "../modules/medicalCase/emergencyCase.entity";
         username: configService.get<string>("database.username"),
         password: configService.get<string>("database.password"),
         database: configService.get<string>("database.database"),
-        entities: [User, EmergencyCase],
+        entities: [User, EmergencyCase, Token],
         synchronize: configService.get<boolean>("database.synchronize"),
       }),
     }),
