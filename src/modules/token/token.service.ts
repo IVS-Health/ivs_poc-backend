@@ -39,7 +39,7 @@ export class TokenService {
 
     this.tokenRepo.save(tokenRegistration);
   }
-  async getTokenByUserId(userId: number) {
+  async getTokenByUserId(userId: TokenRegistrationDto["userId"]) {
     const tokenRecord = await this.tokenRepo.findOne({
       where: { user: { id: userId } },
     });
