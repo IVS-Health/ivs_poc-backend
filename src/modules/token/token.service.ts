@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { ConflictException, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Token } from "./token.entity";
@@ -23,21 +23,27 @@ export class TokenService {
     if (!user) {
       throw new Error("User not found");
     }
+    try {
+      // If user already has a token → update it
+      if (user.token) {
+        user.token.token = dto.token;
+        await this.tokenRepo.save(user.token);
+        return;
+      } else {
+        // Else create new token record
+        const tokenRegistration = this.tokenRepo.create({
+          token: dto.token,
+          user,
+        });
 
-    // If user already has a token → update it
-    if (user.token) {
-      user.token.token = dto.token;
-      this.tokenRepo.save(user.token);
-      return;
+        await this.tokenRepo.save(tokenRegistration);
+      }
+    } catch (e) {
+      if (e.code === "23505") {
+        throw new ConflictException("Token already registered");
+      }
+      throw e;
     }
-
-    // Else create new token record
-    const tokenRegistration = this.tokenRepo.create({
-      token: dto.token,
-      user,
-    });
-
-    this.tokenRepo.save(tokenRegistration);
   }
   async getTokenByUserId(userId: TokenRegistrationDto["userId"]) {
     const tokenRecord = await this.tokenRepo.findOne({
