@@ -5,6 +5,7 @@ import databaseConfig from "../config/database.config";
 import { User } from "../modules/users/user.entity";
 import { EmergencyCase } from "../modules/medicalCase/emergencyCase.entity";
 import { Token } from "src/modules/token/token.entity";
+import { Notification } from "src/modules/notification/notification.entity";
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { Token } from "src/modules/token/token.entity";
         username: configService.get<string>("database.username"),
         password: configService.get<string>("database.password"),
         database: configService.get<string>("database.database"),
-        entities: [User, EmergencyCase, Token],
+        entities: [User, EmergencyCase, Token, Notification],
         synchronize: configService.get<boolean>("database.synchronize"),
       }),
     }),
