@@ -2,17 +2,18 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from './user.entity';
-import { CreateUserDto } from './dto/user.dto';
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { User } from "./user.entity";
+import { CreateUserDto, LoginDto } from "./dto/user.dto";
+import { Token } from "../token/token.entity";
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
+    private readonly userRepo: Repository<User>
   ) {}
 
   async register(createUserDto: CreateUserDto) {
@@ -20,16 +21,17 @@ export class UsersService {
 
     const existing = await this.userRepo.findOne({ where: { email } });
     if (existing) {
-      throw new BadRequestException('Email already registered');
+      throw new BadRequestException("Email already registered");
     }
 
     const user = this.userRepo.create({ email, name, age, medicalSpecialty });
     await this.userRepo.save(user);
+    return user;
   }
 
-  async findByEmail(email: string) {
+  async findByEmail(email: LoginDto["email"]) {
     if (!email) {
-      throw new BadRequestException('Email query parameter is required');
+      throw new BadRequestException("Email query parameter is required");
     }
 
     const user = await this.userRepo.findOne({ where: { email } });
