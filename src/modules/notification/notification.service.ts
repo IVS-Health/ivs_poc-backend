@@ -52,8 +52,13 @@ export class NotificationsService {
   async sendNotification(dto: NotificationDto) {
     await this.updateNotification(dto);
 
+    const emergencyCase = await this.emergencyCaseRepo.findOne({
+      where: { id: dto.caseId },
+    });
+
     const payload = {
       caseId: dto.caseId.toString(),
+      type: (emergencyCase?.status || "UNKNOWN").toUpperCase(),
       Distance: "10",
     };
 
