@@ -4,3 +4,11 @@ export class NotificationDto {
   @IsNumber()
   caseId: number;
 }
+
+export class UpdateNotificationStatusDto {
+  @IsNumber()
+  caseId: number;
+
+  @IsString()
+  notificationStatus: string;
+}

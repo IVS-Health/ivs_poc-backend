@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, Unique } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  Unique,
+  Column,
+} from "typeorm";
 import { Token } from "../token/token.entity";
 import { EmergencyCase } from "../medicalCase/emergencyCase.entity";
 
@@ -13,4 +19,7 @@ export class Notification {
 
   @ManyToOne(() => Token, { onDelete: "CASCADE" })
   token: Token;
+
+  @Column({ nullable: false, default: "sent" })
+  status: string;
 }

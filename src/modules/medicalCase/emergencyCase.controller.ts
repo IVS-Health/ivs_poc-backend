@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Post } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+} from "@nestjs/common";
 import { EmergencyCaseService } from "./emergencyCase.service";
 import { EmergencyCaseDto } from "./dto/emergencyCase.dto";
 
@@ -17,5 +24,12 @@ export class EmergencyCaseController {
   async findAllCases() {
     const cases = await this.emergencyCaseService.findAllCases();
     return { cases };
+  }
+
+  @Get("case/:id")
+  async findCase(@Param("id", ParseIntPipe) caseId: number) {
+    const emergencyCase =
+      await this.emergencyCaseService.findEmergencyCase(caseId);
+    return emergencyCase;
   }
 }

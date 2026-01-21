@@ -16,4 +16,7 @@ export class EmergencyCase {
 
   @Column({ nullable: true })
   patientCondition: string;
+
+  @Column({ nullable: false, default: "open" })
+  status: string;
 }
