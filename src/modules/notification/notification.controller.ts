@@ -1,6 +1,9 @@
-import { Body, Controller, Get, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Post, Put, Query } from "@nestjs/common";
 import { NotificationsService } from "./notification.service";
-import { NotificationDto } from "./dto/notification.dto";
+import {
+  NotificationDto,
+  UpdateNotificationStatusDto,
+} from "./dto/notification.dto";
 
 @Controller("notifications")
 export class NotificationsController {
@@ -9,5 +12,12 @@ export class NotificationsController {
   @Post()
   async sendNotification(@Body() notificationDto: NotificationDto) {
     return this.notificationsService.sendNotification(notificationDto);
+  }
+
+  @Put()
+  async updateNotificationStatus(@Body() dto: UpdateNotificationStatusDto) {
+    return this.notificationsService.updateNotificationStatusAndReturnCaseDetails(
+      dto
+    );
   }
 }

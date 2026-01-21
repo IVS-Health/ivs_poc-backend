@@ -35,4 +35,14 @@ export class EmergencyCaseService {
     }
     return cases;
   }
+
+  async findEmergencyCase(caseId: number) {
+    const emergencyCase = await this.emergencyCaseRepo.findOne({
+      where: { id: caseId },
+    });
+    if (!emergencyCase) {
+      throw new NotFoundException(`Emergency case with ID ${caseId} not found`);
+    }
+    return emergencyCase;
+  }
 }
