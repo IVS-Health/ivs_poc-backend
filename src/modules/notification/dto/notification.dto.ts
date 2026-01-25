@@ -11,4 +11,7 @@ export class UpdateNotificationStatusDto {
 
   @IsString()
   notificationStatus: string;
+
+  @IsNumber()
+  tokenId: number;
 }

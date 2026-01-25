@@ -5,6 +5,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Put,
 } from "@nestjs/common";
 import { EmergencyCaseService } from "./emergencyCase.service";
 import { EmergencyCaseDto } from "./dto/emergencyCase.dto";
@@ -31,5 +32,16 @@ export class EmergencyCaseController {
     const emergencyCase =
       await this.emergencyCaseService.findEmergencyCase(caseId);
     return emergencyCase;
+  }
+
+  @Put("cancelCase")
+  async cancelCase(@Body("caseId", ParseIntPipe) caseId: number) {
+    const emergencyCase = await this.emergencyCaseService.cancelCase(
+      Number(caseId)
+    );
+    return {
+      message: `Case ${emergencyCase.id} closed and all notifications cancelled`,
+      case: emergencyCase,
+    };
   }
 }

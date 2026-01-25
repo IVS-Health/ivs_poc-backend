@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import * as admin from "firebase-admin";
 import { Repository } from "typeorm";
@@ -27,26 +31,42 @@ export class NotificationsService {
       where: { id: dto.caseId },
     });
 
-    if (!emergencyCase) throw new Error("Emergency case not found");
+    if (!emergencyCase) {
+      throw new NotFoundException("Emergency case not found");
+    }
 
     const tokens = await this.tokenRepo.find(); // fetch all tokens
 
-    const notifications: Notification[] = []; // <-- type explicitly
+    const existingNotifications = await this.notificationRepo.find({
+      where: { case: { id: emergencyCase.id } },
+      relations: { token: true },
+    });
 
-    for (const token of tokens) {
-      // Check if notification already exists for this token + case
-      const exists = await this.notificationRepo.findOne({
-        where: { case: { id: emergencyCase.id }, token: { id: token.id } },
-      });
+    const existingTokenIds = new Set(
+      existingNotifications.map((n) => n.token.id)
+    );
 
-      if (!exists) {
-        notifications.push(
-          this.notificationRepo.create({ case: emergencyCase, token })
-        );
-      }
-    }
+    const notifications = tokens
+      .filter((token) => !existingTokenIds.has(token.id))
+      .map((token) =>
+        this.notificationRepo.create({
+          case: emergencyCase,
+          token,
+          status: "sent",
+        })
+      );
 
-    return this.notificationRepo.save(notifications);
+    const saved = notifications.length
+      ? await this.notificationRepo.save(notifications)
+      : [];
+
+    return {
+      message: saved.length
+        ? "Notifications created successfully"
+        : "Notifications already exist for this case",
+      created: saved.length,
+      skipped: tokens.length - saved.length,
+    };
   }
 
   async sendNotification(dto: NotificationDto) {
@@ -56,21 +76,45 @@ export class NotificationsService {
       where: { id: dto.caseId },
     });
 
+    if (!emergencyCase) {
+      throw new NotFoundException("Emergency case not found");
+    }
+
+    if (["assigned", "cancelled", "completed"].includes(emergencyCase.status)) {
+      throw new ConflictException({
+        message: emergencyCase.status,
+      });
+    }
+
+    // Create missing notifications
+    await this.updateNotification(dto);
+
+    const notifications = await this.notificationRepo.find({
+      where: { case: { id: dto.caseId } },
+      relations: { token: { user: true } },
+    });
+
+    const fcmTargets = notifications
+      .map((n) => n.token)
+      .filter((t) => t?.token);
+
+    if (!fcmTargets.length) {
+      throw new NotFoundException("No FCM tokens found");
+    }
+
+    await this.notificationRepo.manager.transaction(async (manager) => {
+      emergencyCase.status = "notified";
+      await manager.save(emergencyCase);
+
+      notifications.forEach((n) => (n.status = "sent"));
+      await manager.save(notifications);
+    });
+
     const payload = {
       caseId: dto.caseId.toString(),
-      type: (emergencyCase?.status || "UNKNOWN").toUpperCase(),
+      type: emergencyCase.status.toUpperCase(),
       Distance: "10",
     };
-
-    const tokens = await this.tokenRepo.find({ relations: { user: true } });
-    const fcmTargets = tokens
-      .filter((t) => t.token) // remove null or empty tokens
-      .map((t) => ({
-        token: t.token,
-        userId: t.user.id,
-      }));
-
-    if (!fcmTargets.length) throw new Error("No FCM tokens found");
 
     const results = await Promise.all(
       fcmTargets.map((target) =>
@@ -80,11 +124,12 @@ export class NotificationsService {
             token: target.token,
             notification: {
               title: "New Emergency Case Registered",
-              body: "Distance: " + payload.Distance + " mins away",
+              body: `Distance: ${payload.Distance} mins away`,
             },
             data: {
               caseId: payload.caseId,
               distanceInMin: payload.Distance,
+              type: payload.type,
             },
           })
           .then((res) => ({
@@ -92,63 +137,78 @@ export class NotificationsService {
             success: true,
             res,
           }))
-          .catch((err) => ({ token: target.token, success: false, err }))
+          .catch((err) => ({
+            token: target.token,
+            success: false,
+            err,
+          }))
       )
     );
 
-    return results;
+    return {
+      message: "Notifications sent successfully",
+      caseStatus: emergencyCase.status,
+      results,
+    };
   }
 
   async updateNotificationStatusAndReturnCaseDetails(
     dto: UpdateNotificationStatusDto
   ) {
-    const { caseId, notificationStatus } = dto;
+    const { caseId, notificationStatus, tokenId } = dto;
 
     const emergencyCase = await this.emergencyCaseRepo.findOne({
       where: { id: caseId },
     });
+
     if (!emergencyCase) {
       throw new NotFoundException("Emergency case not found");
-    } else if (emergencyCase.status === "assigned") {
-      return {
-        message: "assigned",
-        case: emergencyCase,
-      };
-    } else if (emergencyCase.status === "cancelled") {
-      return {
-        message: "cancelled",
-        case: emergencyCase,
-      };
-    } else if (emergencyCase.status === "completed") {
-      return {
-        message: "completed",
-        case: emergencyCase,
-      };
-    } else {
-      emergencyCase.status = "assigned";
-      await this.emergencyCaseRepo.save(emergencyCase);
+    }
+
+    if (["assigned", "cancelled", "completed"].includes(emergencyCase.status)) {
+      throw new ConflictException({
+        message: emergencyCase.status,
+      });
     }
 
     const notification = await this.notificationRepo.findOne({
-      where: { case: { id: caseId } },
+      where: {
+        case: { id: caseId },
+        token: { id: tokenId },
+      },
     });
 
     if (!notification) {
-      throw new NotFoundException("Notification not found for the given case");
+      throw new NotFoundException("Notification not found");
     }
 
-    if (!emergencyCase) {
-      throw new NotFoundException("Emergency case not found");
-    }
+    await this.notificationRepo.manager.transaction(async (manager) => {
+      if (notificationStatus === "accepted") {
+        emergencyCase.status = "assigned";
+        await manager.save(emergencyCase);
+      }
 
-    // update the status
-    notification.status = notificationStatus;
-
-    await this.notificationRepo.save(notification);
+      notification.status = notificationStatus;
+      await manager.save(notification);
+    });
 
     return {
-      message: "accepted",
+      message: notificationStatus,
       case: emergencyCase,
     };
+  }
+
+  async cancelNotificationsByCaseId(caseId: number) {
+    const notifications = await this.notificationRepo.find({
+      where: { case: { id: caseId } },
+    });
+
+    if (!notifications.length) return;
+
+    // Use a transaction to safely update all notifications
+    await this.notificationRepo.manager.transaction(async (manager) => {
+      notifications.forEach((n) => (n.status = "cancelled"));
+      await manager.save(notifications);
+    });
   }
 }
