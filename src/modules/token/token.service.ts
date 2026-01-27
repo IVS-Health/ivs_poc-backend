@@ -24,11 +24,11 @@ export class TokenService {
       throw new Error("User not found");
     }
     try {
+      let savedToken: Token;
       // If user already has a token → update it
       if (user.token) {
         user.token.token = dto.token;
-        await this.tokenRepo.save(user.token);
-        return;
+        savedToken = await this.tokenRepo.save(user.token);
       } else {
         // Else create new token record
         const tokenRegistration = this.tokenRepo.create({
@@ -36,8 +36,12 @@ export class TokenService {
           user,
         });
 
-        await this.tokenRepo.save(tokenRegistration);
+        savedToken = await this.tokenRepo.save(tokenRegistration);
       }
+      return {
+        message: "Token saved successfully",
+        tokenId: savedToken.id,
+      };
     } catch (e) {
       if (e.code === "23505") {
         throw new ConflictException("Token already registered");
