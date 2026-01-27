@@ -160,41 +160,89 @@ export class NotificationsService {
     const emergencyCase = await this.emergencyCaseRepo.findOne({
       where: { id: caseId },
     });
+    if (!emergencyCase) throw new NotFoundException("Emergency case not found");
 
-    if (!emergencyCase) {
-      throw new NotFoundException("Emergency case not found");
-    }
+    const notification = await this.notificationRepo.findOne({
+      where: { case: { id: caseId }, token: { id: tokenId } },
+    });
+    if (!notification) throw new NotFoundException("Notification not found");
 
-    if (["assigned", "cancelled", "completed"].includes(emergencyCase.status)) {
+    const currentCaseStatus = emergencyCase.status;
+
+    const caseCancelled = currentCaseStatus === "cancelled";
+    const caseLocked = ["assigned", "completed", "cancelled"].includes(
+      currentCaseStatus
+    );
+
+    await this.notificationRepo.manager.transaction(async (manager) => {
+      // ---------------- NOTIFICATION STATUS ----------------
+      if (!caseCancelled) {
+        // Only update notification if case is not cancelled
+        notification.status = caseLocked
+          ? `late_${notificationStatus}` // mark late responders
+          : notificationStatus;
+
+        await manager.save(notification);
+      }
+
+      // ---------------- CASE STATE MACHINE ----------------
+      if (!caseLocked && !caseCancelled) {
+        if (notificationStatus === "accepted") {
+          emergencyCase.status = "assigned";
+          await manager.save(emergencyCase);
+        }
+
+        if (notificationStatus === "completed") {
+          emergencyCase.status = "completed";
+          await manager.save(emergencyCase);
+        }
+
+        // if (notificationStatus === "rejected") {
+        //   const allNotifications = await manager.find(Notification, {
+        //     where: { case: { id: caseId } },
+        //   });
+
+        //   const allRejected = allNotifications.every((n) =>
+        //     ["rejected", "late_rejected"].includes(n.status)
+        //   );
+
+        //   if (allRejected) {
+        //     emergencyCase.status = "cancelled";
+        //     await manager.save(emergencyCase);
+        //   }
+        // }
+      }
+    });
+
+    // ---------------- THROW CONFLICT AFTER COMMIT ----------------
+    if (caseLocked) {
       throw new ConflictException({
-        message: emergencyCase.status,
+        message: `Case already ${currentCaseStatus}`,
+        // emergencyCaseStatus: emergencyCase.status,
+        // notificationStatus: notification.status,
       });
     }
 
-    const notification = await this.notificationRepo.findOne({
-      where: {
-        case: { id: caseId },
-        token: { id: tokenId },
-      },
-    });
-
-    if (!notification) {
-      throw new NotFoundException("Notification not found");
+    if (notificationStatus === "accepted") {
+      return {
+        message: "You have successfully accepted the case",
+        caseId: emergencyCase.id,
+        notificationStatus: notification.status,
+      };
     }
 
-    await this.notificationRepo.manager.transaction(async (manager) => {
-      if (notificationStatus === "accepted") {
-        emergencyCase.status = "assigned";
-        await manager.save(emergencyCase);
-      }
+    if (notificationStatus === "rejected") {
+      return {
+        message: "You have rejected the case",
+        caseId: emergencyCase.id,
+      };
+    }
 
-      notification.status = notificationStatus;
-      await manager.save(notification);
-    });
-
+    // default fallback
     return {
-      message: notificationStatus,
-      case: emergencyCase,
+      message: "Status updated",
+      caseId: emergencyCase.id,
+      notificationStatus: notification.status,
     };
   }
 
