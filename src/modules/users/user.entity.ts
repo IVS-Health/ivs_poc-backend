@@ -1,5 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToOne,
+  OneToMany,
+} from "typeorm";
 import { Token } from "../token/token.entity";
+import { EmergencyCase } from "../medicalCase/emergencyCase.entity";
 
 @Entity()
 export class User {
@@ -20,4 +27,7 @@ export class User {
 
   @OneToOne(() => Token, (token) => token.user)
   token?: Token;
+
+  @OneToMany(() => EmergencyCase, (emergencyCase) => emergencyCase.assignedTo)
+  assignedCases: EmergencyCase[];
 }

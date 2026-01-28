@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from "typeorm";
+import { User } from "../users/user.entity";
 
 @Entity()
 export class EmergencyCase {
@@ -19,4 +26,8 @@ export class EmergencyCase {
 
   @Column({ nullable: false, default: "open" })
   status: string;
+
+  @ManyToOne(() => User, (user) => user.assignedCases, { nullable: true })
+  @JoinColumn({ name: "assignedToUserId" }) // DB column name
+  assignedTo: User | null;
 }
