@@ -32,10 +32,14 @@ export class EmergencyCaseService {
   }
 
   async findAllCases() {
-    const cases = await this.emergencyCaseRepo.find();
-    if (!cases) {
-      throw new NotFoundException(`No casesfound`);
+    const cases = await this.emergencyCaseRepo.find({
+      relations: ["assignedTo"], // 👈 THIS IS THE FIX
+    });
+
+    if (!cases.length) {
+      throw new NotFoundException(`No cases found`);
     }
+
     return cases;
   }
 
@@ -65,6 +69,7 @@ export class EmergencyCaseService {
     }
 
     emergencyCase.status = "cancelled";
+    emergencyCase.assignedTo = null;
 
     // Save the case first
     await this.emergencyCaseRepo.save(emergencyCase);

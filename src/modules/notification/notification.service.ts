@@ -159,13 +159,18 @@ export class NotificationsService {
 
     const emergencyCase = await this.emergencyCaseRepo.findOne({
       where: { id: caseId },
+      relations: ["assignedTo"],
     });
     if (!emergencyCase) throw new NotFoundException("Emergency case not found");
 
     const notification = await this.notificationRepo.findOne({
       where: { case: { id: caseId }, token: { id: tokenId } },
+      relations: ["token", "token.user"],
     });
+
     if (!notification) throw new NotFoundException("Notification not found");
+
+    const user = notification.token.user;
 
     const currentCaseStatus = emergencyCase.status;
 
@@ -189,6 +194,7 @@ export class NotificationsService {
       if (!caseLocked && !caseCancelled) {
         if (notificationStatus === "accepted") {
           emergencyCase.status = "assigned";
+          emergencyCase.assignedTo = user;
           await manager.save(emergencyCase);
         }
 
